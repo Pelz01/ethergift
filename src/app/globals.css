@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* tailwindcss-animate removed - animations defined manually below */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Core Colors - Light Mode Default */
+  --background: #fafaf9;
+  /* Stone 50 */
+  --foreground: #1c1917;
+  /* Stone 900 */
+
+  /* Card/Surface */
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+
+  /* Primary - Gold/Amber */
+  --primary: #d97706;
+  /* Amber 600 */
+  --primary-foreground: #ffffff;
+
+  /* Secondary */
+  --secondary: #f5f5f4;
+  /* Stone 100 */
+  --secondary-foreground: #292524;
+  /* Stone 800 */
+
+  /* Muted */
+  --muted: #f5f5f4;
+  --muted-foreground: #78716c;
+
+  /* Accent */
+  --accent: #fef3c7;
+  /* Amber 100 */
+  --accent-foreground: #92400e;
+  /* Amber 800 */
+
+  /* Destructive */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* Border/Input */
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #d97706;
+
+  /* Chart (if needed later) */
+  --radius: 0.625rem;
+}
+
+.dark {
+  /* Core Colors - Dark Mode */
+  --background: #0c0a09;
+  /* Stone 950 */
+  --foreground: #fafaf9;
+  /* Stone 50 */
+
+  /* Card/Surface */
+  --card: #1c1917;
+  --card-foreground: #fafaf9;
+  --popover: #1c1917;
+  --popover-foreground: #fafaf9;
+
+  /* Primary - Gold/Amber */
+  --primary: #f59e0b;
+  /* Amber 500 */
+  --primary-foreground: #1c1917;
+
+  /* Secondary */
+  --secondary: #292524;
+  /* Stone 800 */
+  --secondary-foreground: #fafaf9;
+
+  /* Muted */
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+
+  /* Accent */
+  --accent: #451a03;
+  /* Amber 950 */
+  --accent-foreground: #fde68a;
+
+  /* Destructive */
+  --destructive: #991b1b;
+  --destructive-foreground: #fafaf9;
+
+  /* Border/Input */
+  --border: #292524;
+  --input: #292524;
+  --ring: #f59e0b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-heading: var(--font-outfit), ui-sans-serif, system-ui;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0
+    }
+
+    to {
+      height: var(--radix-accordion-content-height)
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height)
+    }
+
+    to {
+      height: 0
+    }
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
