@@ -104,9 +104,11 @@ export function GiftCard({
                                 Recall Gift
                             </Button>
                         ) : (
-                            <Button variant="outline" size="sm" className="w-full" asChild>
-                                <Link href={`/gift/${tokenId}`}>View Status</Link>
-                            </Button>
+                            <Link href={`/gift/${tokenId}`} className="w-full">
+                                <Button variant="outline" size="sm" className="w-full">
+                                    View Status
+                                </Button>
+                            </Link>
                         )
                     ) : (
                         <Button variant="ghost" disabled className="w-full text-muted-foreground">

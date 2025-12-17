@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -34,11 +34,11 @@ const DEMO_GIFT = {
 };
 
 interface GiftPageProps {
-    params: { tokenId: string };
+    params: Promise<{ tokenId: string }>;
 }
 
 export default function GiftPage({ params }: GiftPageProps) {
-    const tokenId = params.tokenId;
+    const { tokenId } = use(params);
     const { isConnected, address } = useAccount();
 
     // UI States
