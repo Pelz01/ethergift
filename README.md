@@ -17,6 +17,7 @@ A decentralized gifting protocol that transforms sending ETH into an immersive u
 - **🎬 3D Experience** - Immersive unboxing with React Three Fiber
 - **💌 Personal Notes** - Attach a message to your gift
 - **🔄 Recall Feature** - Senders can reclaim unclaimed gifts
+- **⚡ Instant History** - Powered by Alchemy for scalable transaction tracking
 
 ## 🚀 Quick Start
 
@@ -133,6 +134,7 @@ To deploy your own:
 | Frontend | Next.js 16, React 19 |
 | Styling | Tailwind CSS v4 |
 | Web3 | Wagmi, Viem, RainbowKit |
+| Data | Alchemy RPC (Asset Transfers API) |
 | 3D | React Three Fiber, Three.js |
 | Animation | Framer Motion |
 | Contract | Solidity 0.8.20 |

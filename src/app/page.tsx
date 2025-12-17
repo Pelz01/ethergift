@@ -41,9 +41,9 @@ export default function HomePage() {
               variants={staggerItem}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-tight"
             >
-              Send Value, <br />
+              Don't Just Send.<br />
               <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
-                Not Just Hashes.
+                Give.
               </span>
             </motion.h1>
 
