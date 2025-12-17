@@ -52,7 +52,7 @@ Create a `.env.local` file in the `ethergift` directory:
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 
 # GiftBox Contract Address (Sepolia)
-NEXT_PUBLIC_CONTRACT_ADDRESS=0xB0d30C2722837b4536C7eAB66b5D8B740a0f543a
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x
 ```
 
 ## 📁 Project Structure
