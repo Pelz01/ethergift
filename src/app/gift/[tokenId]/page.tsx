@@ -13,8 +13,9 @@ import { NoteModal } from '@/components/NoteModal';
 import { ETHReveal } from '@/components/ETHReveal';
 import { GIFT_BOX_ABI, GIFT_BOX_ADDRESS, BoxStyle, truncateAddress, formatEth } from '@/lib/contract';
 import { pageVariants } from '@/lib/animations';
-import { Lock, Search, Plus, Home } from 'lucide-react';
+import { Lock, Search, Plus, Home, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GiftCardPreview } from '@/components/GiftCardPreview';
 
 // Dynamic import for 3D component to avoid SSR issues
 const GiftBox3D = dynamic(
@@ -28,9 +29,10 @@ const DEMO_GIFT = {
     amount: BigInt('100000000000000000'), // 0.1 ETH
     message: 'Happy Birthday, fren! 🎉 Hope this makes your day special.',
     boxStyle: BoxStyle.Gold,
-    createdAt: BigInt(Date.now() / 1000),
+    createdAt: BigInt(Math.floor(Date.now() / 1000)),
     claimed: false,
     currentOwner: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+    recipient: '0x0000000000000000000000000000000000000000' as `0x${string}`,
 };
 
 interface GiftPageProps {
@@ -46,7 +48,7 @@ export default function GiftPage({ params }: GiftPageProps) {
     const [isShaking, setIsShaking] = useState(false);
     const [isExploding, setIsExploding] = useState(false);
     const [showReveal, setShowReveal] = useState(false);
-    const [useDemo, setUseDemo] = useState(true); // Default to demo mode
+    const [useDemo, setUseDemo] = useState(false); // Disable demo by default to verify real data
 
     // Contract reads - disabled when using demo
     const { data: giftData, isLoading, error: readError } = useReadContract({
@@ -59,9 +61,11 @@ export default function GiftPage({ params }: GiftPageProps) {
         },
     });
 
-    // Use demo data if contract call fails
+    // Use demo data only if REAL error or explicitly set
     useEffect(() => {
-        if (readError || GIFT_BOX_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        // If contract address is default, use demo. If readError, maybe use demo?
+        // Actually, for debugging, let's stick to real data unless forced.
+        if (GIFT_BOX_ADDRESS === '0x0000000000000000000000000000000000000000') {
             setUseDemo(true);
         }
     }, [readError]);
@@ -75,6 +79,7 @@ export default function GiftPage({ params }: GiftPageProps) {
         createdAt: giftData[4],
         claimed: giftData[5],
         currentOwner: giftData[6],
+        recipient: giftData[6], // Use currentOwner as recipient
     } : null;
 
     // Contract writes
@@ -92,10 +97,12 @@ export default function GiftPage({ params }: GiftPageProps) {
         }
     }, [isSuccess, isExploding, useDemo]);
 
-    // Check ownership
+    // Check ownership and sender status
     const isOwner = useDemo
         ? isConnected // In demo mode, any connected wallet is the owner
         : gift && address && gift.currentOwner.toLowerCase() === address.toLowerCase();
+
+    const isSender = gift && address && gift.sender.toLowerCase() === address.toLowerCase();
 
     const isClaimed = gift?.claimed || false;
 
@@ -187,14 +194,16 @@ export default function GiftPage({ params }: GiftPageProps) {
                             <div>
                                 <h1 className="text-2xl font-bold mb-2">Gift Already Claimed</h1>
                                 <p className="text-muted-foreground">
-                                    This gift has already been unwrapped.
+                                    {isSender
+                                        ? "This gift has been unwrapped by the recipient."
+                                        : "You have already unwrapped this gift."}
                                 </p>
                             </div>
                             <Link href="/create">
-                                <Button className="w-full">Create Your Own Gift</Button>
+                                <Button className="w-full">Wrap Another Gift</Button>
                             </Link>
-                            <Link href="/">
-                                <Button variant="ghost" className="w-full">Back to Home</Button>
+                            <Link href="/dashboard">
+                                <Button variant="ghost" className="w-full">Back to Dashboard</Button>
                             </Link>
                         </CardContent>
                     </Card>
@@ -203,12 +212,16 @@ export default function GiftPage({ params }: GiftPageProps) {
                 {/* Active Gift */}
                 {!isClaimed && !showReveal && (
                     <div className="w-full max-w-4xl flex flex-col items-center">
-                        {/* 3D Gift Box */}
-                        <div className="w-full max-w-lg h-[400px] mb-8 relative">
-                            <GiftBox3D
-                                boxStyle={gift?.boxStyle || BoxStyle.Gold}
-                                isShaking={isShaking}
-                                isExploding={isExploding}
+                        {/* Gift Card Preview */}
+                        <div className="w-full max-w-sm mb-8 transform hover:scale-105 transition-transform duration-300">
+                            <GiftCardPreview
+                                template={
+                                    (gift?.boxStyle || BoxStyle.Gold) === BoxStyle.Gold ? 'classic' :
+                                        (gift?.boxStyle || BoxStyle.Gold) === BoxStyle.Obsidian ? 'bow' : 'ribbon'
+                                }
+                                amount={formatEth(gift?.amount || BigInt(0)).replace(' ETH', '')}
+                                recipient={isSender ? (gift?.recipient || '') : (address || '')}
+                                message={gift?.message || ''}
                             />
                         </div>
 
@@ -222,7 +235,7 @@ export default function GiftPage({ params }: GiftPageProps) {
                                     className="text-center mb-8 space-y-2 bg-background/50 backdrop-blur-sm p-6 rounded-2xl border border-border/50 shadow-sm"
                                 >
                                     <p className="text-sm font-medium text-muted-foreground">
-                                        Gift from <span className="text-primary font-mono">{truncateAddress(gift?.sender || '')}</span>
+                                        {isSender ? "You sent a gift to" : "Gift from"} <span className="text-primary font-mono">{truncateAddress(isSender ? gift?.recipient || '' : gift?.sender || '')}</span>
                                     </p>
                                     <p className="text-2xl font-bold">
                                         Contains <span className="text-primary">{formatEth(gift?.amount || BigInt(0))} ETH</span>
@@ -236,7 +249,7 @@ export default function GiftPage({ params }: GiftPageProps) {
                             {!isConnected && !isExploding && (
                                 <Card className="text-center border-dashed">
                                     <CardContent className="pt-6 space-y-4">
-                                        <p className="text-muted-foreground">Connect your wallet to unwrap this gift</p>
+                                        <p className="text-muted-foreground">Connect your wallet to view actions</p>
                                         <div className="flex justify-center">
                                             <ConnectButton />
                                         </div>
@@ -244,7 +257,21 @@ export default function GiftPage({ params }: GiftPageProps) {
                                 </Card>
                             )}
 
-                            {isConnected && !isOwner && !useDemo && !isExploding && (
+                            {isConnected && isSender && !isClaimed && (
+                                <Card className="bg-primary/5 border-primary/20 text-center">
+                                    <CardContent className="pt-6 space-y-4">
+                                        <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                            <Send className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-semibold text-lg">Gift Sent!</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Waiting for recipient to unwrap.
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {isConnected && !isSender && !isOwner && !useDemo && !isExploding && (
                                 <Card className="border-destructive/20 text-center">
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="w-12 h-12 mx-auto bg-destructive/10 rounded-full flex items-center justify-center text-destructive">
@@ -261,7 +288,7 @@ export default function GiftPage({ params }: GiftPageProps) {
                             )}
 
                             {/* Unwrap Button */}
-                            {isConnected && (isOwner || useDemo) && !isExploding && (
+                            {isConnected && !isSender && (isOwner || useDemo) && !isExploding && (
                                 <div className="flex justify-center">
                                     <UnwrapButton
                                         onComplete={handleUnwrap}

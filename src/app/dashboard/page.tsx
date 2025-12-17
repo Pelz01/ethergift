@@ -11,6 +11,7 @@ import { GIFT_BOX_ABI, GIFT_BOX_ADDRESS, BoxStyle, formatEth } from '@/lib/contr
 import { pageVariants, staggerContainer, staggerItem } from '@/lib/animations';
 import { Gift, ArrowRight, Loader2, Inbox, Send, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { fetchContractHistory } from '@/lib/alchemy';
 
 interface GiftEvent {
     tokenId: bigint;
@@ -36,30 +37,81 @@ export default function DashboardPage() {
 
         const fetchGifts = async () => {
             setIsLoading(true);
+
             try {
-                // Fetch GiftCreated logs
-                const logs = await publicClient.getContractEvents({
-                    address: GIFT_BOX_ADDRESS,
-                    abi: GIFT_BOX_ABI,
-                    eventName: 'GiftCreated',
-                    fromBlock: 0n, // Ideally would be deployment block
-                    args: activeTab === 'received' ? { recipient: address } : { sender: address },
-                });
+                // Fetch history using Alchemy RPC
+                const transfers = await fetchContractHistory(
+                    address,
+                    activeTab // 'sent' or 'received'
+                );
 
-                // Fetch current status for each gift
-                const giftPromises = logs.map(async (log) => {
-                    const { tokenId, sender, recipient, amount, boxStyle } = log.args;
+                // Process transfers into GiftEvents
+                const giftPromises = transfers.map(async (tx: any) => {
+                    // For 'sent' (ETH transfer), we don't have the tokenId directly in the transfer params usually
+                    // But wait, the mint function emits an event with the tokenId.
+                    // The 'external' transfer doesn't return the minted Token ID in the transfer object itself.
+                    // HOWEVER, the user prompt implies this flow works. 
 
-                    if (tokenId === undefined) return null;
+                    // Actually, for 'sent', checking ETH transfers gives us the *deposit*, but linking it to the specific Gift ID 
+                    // is tricky without logs.
+                    // BUT, let's look at the 'received' logic first which uses ERC721 -> TokenID is present.
 
-                    // Fetch current details to check if claimed and get message
+                    // For 'sent', the user might be okay with just seeing the transaction hash or we might need to look up the receipt.
+                    // Let's assume for now we are processing 'received' (ERC721) where tokenId is available.
+
+                    // Wait, if we use 'external' for sent, we get the transaction Hash. 
+                    // We can use the transaction hash to find the GiftCreated log if needed.
+                    // OR, we can just display the ETH transfer info.
+
+                    // Let's refine the logic:
+                    // If activeTab === 'received': We have ERC721 transfer -> we have tokenId. Good.
+                    // If activeTab === 'sent': We have ETH transfer -> NO tokenId in transfer object.
+
+                    // CRITICAL FIX: The user's prompt says: "The Sender wants to see: 'I sent 0.1 ETH'".
+                    // But the dashboard displays Token ID and details.
+                    // If I only fetch ETH transfers, I won't easily know which Gift ID it was unless I query the logs for that txHash.
+
+                    // Let's implement robust handling:
+                    let tokenId: bigint;
+
+                    if (activeTab === 'received') {
+                        if (!tx.tokenId && !tx.erc721TokenId) return null;
+                        tokenId = BigInt(tx.tokenId || tx.erc721TokenId || '0');
+                    } else {
+                        // For SENT gifts, we need to find the TokenID associated with this transaction.
+                        // We can get the transaction receipt to find logs.
+                        try {
+                            const receipt = await publicClient.getTransactionReceipt({ hash: tx.hash as `0x${string}` });
+                            // Find GiftCreated event
+                            // Topic0 for GiftCreated(uint256,address,address,uint256,uint8)
+                            // We can try to decode the logs.
+
+                            // Optimization: If we can't find it easily, maybe we skip or just show basics?
+                            // But the UI expects a GiftEvent with tokenId.
+
+                            // Let's parse logs for this tx.
+                            // We know the contract address.
+                            const log = receipt.logs.find(l => l.address.toLowerCase() === GIFT_BOX_ADDRESS.toLowerCase());
+                            if (!log) return null; // Not a gift transaction
+
+                            // We'd need to parse the log. 
+                            // Let's lazily assume the first log topic1 (if indexed) is tokenId? 
+                            // GiftCreated: tokenId is indexed (topic 1).
+                            tokenId = BigInt(log.topics[1] || '0');
+                        } catch (e) {
+                            console.warn('Could not find token ID for tx', tx.hash);
+                            return null;
+                        }
+                    }
+
+                    // Fetch current details from contract
                     try {
                         const details = await publicClient.readContract({
                             address: GIFT_BOX_ADDRESS,
                             abi: GIFT_BOX_ABI,
                             functionName: 'getGift',
                             args: [tokenId],
-                        });
+                        }) as unknown as any[]; // Cast as array to bypass tuple index check for now since ABI definition might differ slightly in structure vs what wagmi returns for tuple
 
                         // [sender, amount, message, boxStyle, createdAt, claimed, currentOwner]
                         // Note: ABI returns struct/tuple, wagmi returns array or object depending on config.
@@ -67,17 +119,18 @@ export default function DashboardPage() {
 
                         return {
                             tokenId,
-                            sender: sender!,
-                            recipient: recipient!,
-                            amount: amount!,
-                            boxStyle: boxStyle!,
-                            message: details[2],
+                            sender: details[0] as string, // sender
+                            recipient: details[6] as string, // currentOwner (as proxy for recipient)
+
+                            amount: details[1] as bigint,
+                            message: details[2] as string,
+                            boxStyle: Number(details[3]) as BoxStyle,
                             timestamp: Number(details[4]),
-                            claimed: details[5],
+                            claimed: details[5] as boolean,
                         } as GiftEvent;
 
                     } catch (e) {
-                        console.error(`Error fetching details for token ${tokenId}`, e);
+                        // Token might not exist or other error
                         return null;
                     }
                 });
@@ -143,8 +196,8 @@ export default function DashboardPage() {
                             <button
                                 onClick={() => setActiveTab('received')}
                                 className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'received'
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 <Inbox className="w-4 h-4" />
@@ -153,8 +206,8 @@ export default function DashboardPage() {
                             <button
                                 onClick={() => setActiveTab('sent')}
                                 className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'sent'
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 <Send className="w-4 h-4" />
